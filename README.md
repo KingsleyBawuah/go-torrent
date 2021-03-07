@@ -1,2 +1,3 @@
-# torrent
-CLI torrent downloader written in Go
+# go-torrent
+
+CLI torrent client written in Go
