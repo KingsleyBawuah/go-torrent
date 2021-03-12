@@ -17,11 +17,13 @@ package cmd
 
 import (
 	"bytes"
-	"fmt"
+	"crypto/sha1"
 	"github.com/spf13/cobra"
 	"github.com/zeebo/bencode"
 	"io/ioutil"
 	"log"
+	"net/http"
+	"net/url"
 	"os"
 )
 
@@ -37,7 +39,6 @@ var getCmd = &cobra.Command{
 	go-torrent get /Users/root/Downloads/debian-10.8.0-amd64-netinst.iso.torrent
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("get called")
 		//TODO: Separate this logic into it's own file.
 		log.Println("Welcome to go-torrent!")
 		torrentFilepath := args[0]
@@ -59,20 +60,13 @@ var getCmd = &cobra.Command{
 		}
 
 		//Information on torrent file structure: https://wiki.theory.org/BitTorrentSpecification
-		type torrentInfoBencode struct {
-			Name        string `bencode:"name"`         //Name of the file to be downloaded.
-			Length      int64  `bencode:"length"`       //Length of the file to be downloaded
-			Pieces      string `bencode:"pieces"`       //string consisting of the concatenation of all 20-byte SHA1 hash values, one per piece.
-			PieceLength int64  `bencode:"piece length"` //Bytes per piece
-		}
-
 		type torrent struct {
-			Announce     string             `bencode:"announce"`      //Url of the tracker
-			Comment      string             `bencode:"comment"`       //Comment left on the torrent. Optional
-			CreationDate int64              `bencode:"creation date"` //Date torrent was created
-			CreatedBy    string             `bencode:"created by"`    //Author. Optional
-			Encoding     string             `bencode:"encoding"`      //the string encoding format used to generate the pieces part of the info dictionary in the .torrent metafile. Optional
-			Info         torrentInfoBencode `bencode:"info"`          //TODO: Handle multiple file case.
+			Announce     string                 `bencode:"announce"`      //Url of the tracker
+			Comment      string                 `bencode:"comment"`       //Comment left on the torrent. Optional
+			CreationDate int64                  `bencode:"creation date"` //Date torrent was created
+			CreatedBy    string                 `bencode:"created by"`    //Author. Optional
+			Encoding     string                 `bencode:"encoding"`      //the string encoding format used to generate the pieces part of the info dictionary in the .torrent metafile. Optional
+			Info         map[string]interface{} `bencode:"info"`          //TODO: Handle multiple file case.
 		}
 
 		inputTorrentFile := &torrent{}
@@ -85,26 +79,52 @@ var getCmd = &cobra.Command{
 			log.Panic("Error decoding torrent file: ", err)
 		}
 
-		log.Printf("Decoded torrent file %+v\\n", inputTorrentFile)
-
 		if inputTorrentFile.Announce == "" {
 			log.Panic("The torrent file you supplied does not have an announce field. This client only supports the original BitTorrent Spec. Please try another torrent.")
 		}
 
-		////Construct a request to the tracker
-		//trackerUrl, err := url.Parse(inputTorrentFile.Announce)
-		//trackerReq := url.Values{}
-		//trackerReq.Add()
-		//
-		//resp, err := http.Get(inputTorrentFile.Announce)
-		//if err != nil {
-		//	log.Panicf("Error getting information from the torrent's announce url: %s. Error message: %s", inputTorrentFile.Announce, err)
-		//}
-		//defer resp.Body.Close()
-		//
-		//body, err := ioutil.ReadAll(resp.Body)
-		//
-		//log.Print("Body of the tracker response: ", body)
+		//SHA-1 Encode the Info key's value.
+		infoBytes, err := bencode.EncodeBytes(inputTorrentFile.Info)
+		if err != nil {
+			log.Panic("Error encoding bytes for info field.")
+		}
+		h := sha1.New()
+		h.Write(infoBytes)
+		infoHash := h.Sum(nil)
+
+		//Construct a request to the tracker
+		trackerReq := url.Values{}
+		trackerReq.Add("info_hash", string(infoHash))
+		trackerReq.Add("peer_id", "GT-19362856256926571") //TODO: Figure out how I'm going to generate these.
+		trackerReq.Add("port", "6881")
+		trackerReq.Add("uploaded", "0")
+		trackerReq.Add("downloaded", "0")
+		trackerReq.Add("left", "1000")
+		trackerReq.Add("compact", "0")
+		trackerReq.Add("no_peer_id", "0")
+		trackerReq.Add("event", "started")
+
+		trackerUrl, err := url.Parse(inputTorrentFile.Announce)
+		if err != nil {
+			log.Panic("Error parsing tracker url: ", err)
+		}
+		trackerUrl.RawQuery = trackerReq.Encode()
+
+		log.Print("Requesting information from the tracker at: ", trackerUrl.String())
+
+		resp, err := http.Get(trackerUrl.String())
+		if err != nil {
+			log.Panicf("Error getting information from the torrent's announce url: %s. Error message: %s", inputTorrentFile.Announce, err)
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+
+		//Decode the tracker response
+		var bodyBencode interface{}
+		if err := bencode.DecodeBytes(body, &bodyBencode); err != nil {
+			log.Panic("Error decoding tracker response: ", err)
+		}
+		log.Print("Body of the tracker response: ", bodyBencode)
 	},
 }
 
