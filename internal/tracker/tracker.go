@@ -28,7 +28,7 @@ type Response struct {
 }
 
 // New creates a new Tracker.
-func New(metainfo metainfo.HashManager, link string) Tracker {
+func New(metainfo metainfo.InfoHasher, link string) Tracker {
 	u, err := url.Parse(link)
 	if err != nil {
 		log.Panic("Error parsing tracker url.")
