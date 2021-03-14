@@ -1,5 +1,11 @@
 package metainfo
 
+import (
+	"crypto/sha1"
+	"github.com/zeebo/bencode"
+	"log"
+)
+
 //Represents a .torrent metainfo file.
 //More information on torrent file structure: https://wiki.theory.org/BitTorrentSpecification
 type Torrent struct {
@@ -11,7 +17,7 @@ type Torrent struct {
 	Info         Info   `bencode:"info"`          //Dictionary containing information about the file we want to download.
 }
 
-//Contains information about the file we want to download.
+//Info contains information about the file we want to download.
 type Info struct {
 	//In single file mode, Name is the name of the file to be downloaded.
 	//In multiple file mode, Name is the name of the directory to store files.
@@ -23,16 +29,29 @@ type Info struct {
 	Files       []Files `bencode:"files,omitempty"`   //List of files to be downloaded, not used in single file mode.
 }
 
-//Multiple File mode.
+//Files represents the structure of the file field when downloading multiple files.
 type Files struct {
 	Length int64    `bencode:"length"`
 	Md5sum string   `bencode:"md5sum"`
 	Path   []string `bencode:"path"`
 }
 
+//IsSingleFile determines whether or not we are torrenting a single file or multiple files.
 func (t Torrent) IsSingleFile() bool {
 	if t.Info.Files == nil {
 		return true
 	}
 	return false
+}
+
+//InfoHash creates a hash of the torrent's info field.
+func (t Torrent) InfoHash() string {
+	//SHA-1 Encode the Info key's value.
+	infoBytes, err := bencode.EncodeBytes(t.Info)
+	if err != nil {
+		log.Panic("Error encoding bytes for info field.")
+	}
+	h := sha1.New()
+	h.Write(infoBytes)
+	return string(h.Sum(nil))
 }

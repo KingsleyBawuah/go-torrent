@@ -14,10 +14,12 @@ type Peer struct {
 	Port   int64  `bencode:"port"`
 }
 
+// NewPeerList creates a slice of type Peer from a slice of bytes that correspond to the binary peer list model.
 func NewPeerList(buf []byte) []Peer {
 	var peerList []Peer
 	chunkedList := helper.ChunkBy(buf, 6)
 	for _, val := range chunkedList {
+		//First 4 bytes are the IP addr, final two are the port number.
 		var port uint16
 		b := bytes.NewReader(val[4:])
 		err := binary.Read(b, binary.BigEndian, &port)

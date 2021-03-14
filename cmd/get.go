@@ -17,7 +17,6 @@ package cmd
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"github.com/KingsleyBawuah/go-torrent/internal/metainfo"
 	"github.com/KingsleyBawuah/go-torrent/internal/peer"
 	"github.com/KingsleyBawuah/go-torrent/internal/tracker"
@@ -25,8 +24,6 @@ import (
 	"github.com/zeebo/bencode"
 	"io/ioutil"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 )
 
@@ -83,49 +80,11 @@ var getCmd = &cobra.Command{
 			log.Panic("The torrent file you supplied does not have an announce field. This client only supports the original BitTorrent Spec. Please try another torrent.")
 		}
 
-		//SHA-1 Encode the Info key's value.
-		infoBytes, err := bencode.EncodeBytes(inputTorrentFile.Info)
-		if err != nil {
-			log.Panic("Error encoding bytes for info field.")
-		}
-		h := sha1.New()
-		h.Write(infoBytes)
-		infoHash := h.Sum(nil)
+		tr := tracker.New(inputTorrentFile, inputTorrentFile.Announce)
 
-		//Construct a request to the tracker
-		trackerReq := url.Values{}
-		trackerReq.Add("info_hash", string(infoHash))
-		trackerReq.Add("peer_id", "GT-19362856256926571") //TODO: Figure out how I'm going to generate these.
-		trackerReq.Add("port", "6881")
-		trackerReq.Add("uploaded", "0")
-		trackerReq.Add("downloaded", "0")
-		trackerReq.Add("left", "1000")
-		trackerReq.Add("compact", "0")
-		trackerReq.Add("no_peer_id", "0")
-		trackerReq.Add("event", "started")
+		res := tr.Req()
 
-		trackerUrl, err := url.Parse(inputTorrentFile.Announce)
-		if err != nil {
-			log.Panic("Error parsing tracker url: ", err)
-		}
-		trackerUrl.RawQuery = trackerReq.Encode()
-
-		log.Print("Requesting information from the tracker at: ", trackerUrl.String())
-
-		resp, err := http.Get(trackerUrl.String())
-		if err != nil {
-			log.Panicf("Error getting information from the torrent's announce url: %s. Error message: %s", inputTorrentFile.Announce, err)
-		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-
-		//Decode the tracker response
-		bodyBencode := tracker.Response{}
-		if err := bencode.DecodeBytes(body, &bodyBencode); err != nil {
-			log.Panic("Error decoding tracker response: ", err)
-		}
-
-		log.Print("Peer list from the tracker response: ", peer.NewPeerList(bodyBencode.Peers))
+		log.Print("Peer list from the tracker response: ", peer.NewPeerList(res.Peers))
 	},
 }
 
