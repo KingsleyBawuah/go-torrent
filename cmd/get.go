@@ -20,6 +20,7 @@ import (
 	"crypto/sha1"
 	"github.com/KingsleyBawuah/go-torrent/internal/metainfo"
 	"github.com/KingsleyBawuah/go-torrent/internal/peer"
+	"github.com/KingsleyBawuah/go-torrent/internal/tracker"
 	"github.com/spf13/cobra"
 	"github.com/zeebo/bencode"
 	"io/ioutil"
@@ -119,12 +120,12 @@ var getCmd = &cobra.Command{
 		body, err := ioutil.ReadAll(resp.Body)
 
 		//Decode the tracker response
-		bodyBencode := peer.TrackerResponse{}
+		bodyBencode := tracker.Response{}
 		if err := bencode.DecodeBytes(body, &bodyBencode); err != nil {
 			log.Panic("Error decoding tracker response: ", err)
 		}
 
-		log.Print("Peer list from the tracker response: ", bodyBencode.PeerList())
+		log.Print("Peer list from the tracker response: ", peer.NewPeerList(bodyBencode.Peers))
 	},
 }
 
