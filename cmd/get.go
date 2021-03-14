@@ -18,6 +18,8 @@ package cmd
 import (
 	"bytes"
 	"crypto/sha1"
+	"github.com/KingsleyBawuah/go-torrent/internal/metainfo"
+	"github.com/KingsleyBawuah/go-torrent/internal/peer"
 	"github.com/spf13/cobra"
 	"github.com/zeebo/bencode"
 	"io/ioutil"
@@ -58,18 +60,15 @@ var getCmd = &cobra.Command{
 		if err != nil {
 			log.Panic("Error reading file: ", err)
 		}
+		inputTorrentFile := &metainfo.Torrent{}
 
-		//Information on torrent file structure: https://wiki.theory.org/BitTorrentSpecification
-		type torrent struct {
-			Announce     string                 `bencode:"announce"`      //Url of the tracker
-			Comment      string                 `bencode:"comment"`       //Comment left on the torrent. Optional
-			CreationDate int64                  `bencode:"creation date"` //Date torrent was created
-			CreatedBy    string                 `bencode:"created by"`    //Author. Optional
-			Encoding     string                 `bencode:"encoding"`      //the string encoding format used to generate the pieces part of the info dictionary in the .torrent metafile. Optional
-			Info         map[string]interface{} `bencode:"info"`          //TODO: Handle multiple file case.
+		//Determine if we are downloading a single file or multiple.
+		singleFileMode := inputTorrentFile.IsSingleFile()
+		if singleFileMode {
+			log.Println("Single file mode.....")
+		} else {
+			log.Println("Multi file mode.....")
 		}
-
-		inputTorrentFile := &torrent{}
 
 		//Decode the file.
 		r := bytes.NewReader(torrentFileContent)
@@ -120,11 +119,12 @@ var getCmd = &cobra.Command{
 		body, err := ioutil.ReadAll(resp.Body)
 
 		//Decode the tracker response
-		var bodyBencode interface{}
+		bodyBencode := peer.TrackerResponse{}
 		if err := bencode.DecodeBytes(body, &bodyBencode); err != nil {
 			log.Panic("Error decoding tracker response: ", err)
 		}
-		log.Print("Body of the tracker response: ", bodyBencode)
+
+		log.Print("Peer list from the tracker response: ", bodyBencode.PeerList())
 	},
 }
 
