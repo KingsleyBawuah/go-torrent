@@ -17,7 +17,7 @@ type Peer struct {
 // NewPeerList creates a slice of type Peer from a slice of bytes that correspond to the binary peer list model.
 func NewPeerList(buf []byte) []Peer {
 	var peerList []Peer
-	chunkedList := helper.ChunkBy(buf, 6)
+	chunkedList := helper.ChunkBy(buf, 6) //Peer list is always a list of a length that is a multiple of 6.
 	for _, val := range chunkedList {
 		//First 4 bytes are the IP addr, final two are the port number.
 		var port uint16

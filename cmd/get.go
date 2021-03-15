@@ -80,6 +80,7 @@ var getCmd = &cobra.Command{
 			log.Panic("The torrent file you supplied does not have an announce field. This client only supports the original BitTorrent Spec. Please try another torrent.")
 		}
 
+		//Create a new tracker and request information about peers.
 		tr := tracker.New(inputTorrentFile, inputTorrentFile.Announce)
 
 		res := tr.Req()
