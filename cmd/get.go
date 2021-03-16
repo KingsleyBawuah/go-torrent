@@ -85,7 +85,7 @@ var getCmd = &cobra.Command{
 
 		res := tr.Req()
 
-		log.Print("Peer list from the tracker response: ", peer.NewPeerList(res.Peers))
+		log.Print("Peer list from the tracker response: ", peer.InitSwarm(res.Peers))
 	},
 }
 
