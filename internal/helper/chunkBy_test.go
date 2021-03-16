@@ -15,7 +15,40 @@ func TestChunkBy(t *testing.T) {
 		args       args
 		wantChunks [][]byte
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Testing even numbered array, even chunk size",
+			args: args{
+				items:     []byte{128, 107, 163, 83},
+				chunkSize: 2,
+			},
+			wantChunks: [][]byte{{128, 107}, {163, 83}},
+		},
+		{
+			name: "Testing even numbered array, odd chunk size",
+			args: args{
+				items:     []byte{128, 107, 163, 83},
+				chunkSize: 3,
+			},
+			wantChunks: [][]byte{{128, 107, 163}, {83}},
+		},
+
+		{
+			name: "Testing odd numbered array, odd chunk size",
+			args: args{
+				items:     []byte{128, 107, 163, 83, 188},
+				chunkSize: 3,
+			},
+			wantChunks: [][]byte{{128, 107, 163}, {83, 188}},
+		},
+
+		{
+			name: "Testing odd numbered array, even chunk size",
+			args: args{
+				items:     []byte{128, 107, 163, 83, 188},
+				chunkSize: 2,
+			},
+			wantChunks: [][]byte{{128, 107}, {163, 83}, {188}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
