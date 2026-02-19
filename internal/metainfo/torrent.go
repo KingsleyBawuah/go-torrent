@@ -7,7 +7,7 @@ import (
 )
 
 //Represents a .torrent metainfo file.
-//More information on torrent file structure: https://wiki.theory.org/BitTorrentSpecification
+//More information on torrent file structure: https://tixati.com/specs/bittorrent
 type Torrent struct {
 	Announce     string `bencode:"announce"`      //Url of the tracker
 	Comment      string `bencode:"comment"`       //Comment left on the torrent. Optional
